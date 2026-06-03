@@ -83,19 +83,18 @@ local function findCount(raw)
     return raw.quantity or raw.count or raw.amount or raw.size or 1
 end
 
--- Real RS progress in [0, 1]. Prefer AP's pre-computed `completion`
--- ratio. Fall back to crafted/quantity, which can be unreliable
--- (semantics of `crafted` vary across AP versions). Returns nil if
--- nothing usable was found.
+-- Real RS progress in (0, 1]. Only trust raw.completion when it's
+-- actually moving; AP populates it sporadically on some versions and
+-- leaves it at 0 even mid-craft. raw.crafted is NOT a progress signal
+-- on AP (it's "items needing to be crafted" - equal to quantity when
+-- nothing is in storage, -1 when not yet computed), so we don't try
+-- crafted/quantity as a fallback. When this returns nil the display
+-- falls back to elapsed/watchdog.
 local function findProgress(raw)
     if type(raw) ~= "table" then return nil end
-    if type(raw.completion) == "number" and raw.completion > 0 then
-        return math.max(0, math.min(1, raw.completion))
-    end
-    local qty, done = raw.quantity, raw.crafted
-    if type(qty) == "number" and qty > 0
-       and type(done) == "number" and done >= 0 and done <= qty then
-        return done / qty
+    if type(raw.completion) == "number"
+       and raw.completion > 0 and raw.completion <= 1 then
+        return raw.completion
     end
     return nil
 end
@@ -119,6 +118,7 @@ local function normaliseTask(raw)
         name     = name or "?",
         count    = findCount(raw),
         progress = findProgress(raw),
+        id       = (type(raw) == "table" and type(raw.id) == "string") and raw.id or nil,
     }
 end
 

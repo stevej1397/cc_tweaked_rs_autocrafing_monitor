@@ -1,23 +1,26 @@
 -- Owns the state of active and recently-completed crafting jobs.
 --
--- Tasks are fingerprinted by "name#count" because AP/RS does not expose a
--- stable task id. Two simultaneous identical orders therefore collapse into
--- one tracked job; acceptable for monitor purposes.
+-- Tasks are fingerprinted by the RS task UUID (raw.id) when available;
+-- two concurrent identical orders track separately because their UUIDs
+-- differ. Falls back to "name#count" if a task lacks an id (older AP
+-- versions or unusual task shapes); in that case identical concurrent
+-- orders collapse into one tracked job - acceptable for monitor use.
 
 local M = {}
 
-local active    = {}  -- fp -> { name, count, startedAt, lastSeen, cancelledAt? }
+local active    = {}  -- fp -> { name, count, startedAt, lastSeen, progress, cancelledAt? }
 local completed = {}  -- list of { name, count, completedAt }
 
-local function fp(name, count)
-    return (name or "?") .. "#" .. tostring(count or 0)
+local function fp(t)
+    if t.id then return "id:" .. t.id end
+    return "nc:" .. (t.name or "?") .. "#" .. tostring(t.count or 0)
 end
 
 function M.tick(now, rawTasks, normalise)
     local seen = {}
     for _, raw in ipairs(rawTasks) do
         local t = normalise(raw)
-        local key = fp(t.name, t.count)
+        local key = fp(t)
         seen[key] = true
         if not active[key] then
             active[key] = {
@@ -44,11 +47,6 @@ function M.tick(now, rawTasks, normalise)
             active[key] = nil
         end
     end
-end
-
-function M.markCancelled(name, count, now)
-    local key = fp(name, count)
-    if active[key] then active[key].cancelledAt = now end
 end
 
 function M.activeJobs() return active end

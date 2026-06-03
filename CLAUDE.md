@@ -32,8 +32,11 @@ Data flows one way each tick: `bridge.getTasks() -> normaliseTask() -> tracker.t
 
 ## Conventions worth knowing before editing
 
-- **Progress bar = real RS completion**, sourced in `startup.lua`'s `findProgress` from `raw.completion` (preferred) or `raw.crafted / raw.quantity` (fallback). When neither field is usable, the bar stays empty and the count line shows `--` instead of a percentage. The watchdog warning lives separately: the job name turns red once elapsed time crosses 80% of `watchdogSeconds`.
-- **Tasks are fingerprinted as `name#count`** in `tracker.lua` because RS/AP doesn't surface a stable task ID. Two simultaneous identical orders therefore collapse into one tracked job. Don't try to "fix" this with synthetic UUIDs — they won't survive a reboot or a chunk unload because the fingerprint is the only way to re-identify a task across polls.
+- **Progress bar has two modes**, selected per-task in `display.lua`:
+  - When `job.progress` is set (from `raw.completion` in `findProgress`), the bar fills solid lime with that fraction and the count line shows a percentage.
+  - When it isn't, the bar falls back to elapsed/watchdog with a green→yellow→red gradient (50%/80% thresholds), doubling as the auto-cancel warning.
+  In practice most tasks land in the fallback mode: AP's `completion` field stays at `0` for most of a craft on the version observed here. `raw.crafted` is NOT a usable progress signal — it's "items still needing to be crafted" (or `-1` when not yet computed), so don't reach for `crafted/quantity` as a fallback.
+- **Tasks are fingerprinted by `raw.id` (the RS task UUID) when present**, with `name#count` as a fallback when an id isn't available. UUIDs let concurrent identical orders track as separate jobs. Persisted state from before this change uses the old fingerprint format — clear `state.dat` after upgrading.
 - **AP API drift is contained in `bridge.lua`.** `cancelCraftingTask`'s signature has varied across AP versions, so the wrapper tries `(name, amount)` then falls back to `(name)`. `normaliseTask` in `startup.lua` is similarly forgiving about task shape. If you upgrade AP and something breaks, those two functions are where to start.
 - **Peripheral names default to auto-detect** (`rsBridge`, `monitor`). Set `config.bridgeName` / `config.monitorName` explicitly when there's more than one of either on the wired modem network.
 - **Cancelled jobs are NOT logged to history.** The watchdog sets `cancelledAt` on the job; when the next tick sees it disappear from the AP task list, that flag suppresses the completion entry. Preserve this when changing watchdog or tracker logic — otherwise auto-cancels will pollute the "last hour" pane.
