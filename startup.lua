@@ -40,6 +40,11 @@ end
 local function findName(raw)
     if type(raw) ~= "table" then return nil end
     if isItemId(raw.name) then return raw.name end
+    -- AP wraps the item in `resource` on at least some versions.
+    if type(raw.resource) == "table" then
+        if isItemId(raw.resource.name) then return raw.resource.name end
+        if isItemId(raw.resource.id)   then return raw.resource.id end
+    end
     if type(raw.item) == "table" then
         if isItemId(raw.item.name) then return raw.item.name end
         if isItemId(raw.item.id)   then return raw.item.id end
