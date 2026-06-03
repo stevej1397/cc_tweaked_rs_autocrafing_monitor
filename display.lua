@@ -4,9 +4,10 @@
 --   Left pane  = active jobs   (swatch + name, count + elapsed, progress bar)
 --   Right pane = recent crafts (swatch + name, aggregated count + age)
 --
--- Progress bar fills with elapsed/watchdog ratio (not real RS progress -
--- AP doesn't surface that reliably). Green -> yellow -> red as the job
--- nears the auto-cancel threshold.
+-- Progress bar fills with real RS completion (from raw.completion or
+-- crafted/quantity in startup.lua's normaliseTask). The watchdog warning
+-- is shown separately by turning the job's name red once elapsed time
+-- crosses 80% of the auto-cancel threshold.
 
 local M = {}
 
@@ -33,12 +34,6 @@ local function drawSwatch(mon, x, y, color)
     mon.setCursorPos(x, y + 1); mon.write("  ")
 end
 
-local function progressColor(frac)
-    if frac < 0.5 then return colors.lime
-    elseif frac < 0.8 then return colors.yellow
-    else return colors.red end
-end
-
 local function drawProgressBar(mon, x, y, width, fraction)
     fraction = math.max(0, math.min(1, fraction))
     setColors(mon, nil, colors.gray)
@@ -46,7 +41,7 @@ local function drawProgressBar(mon, x, y, width, fraction)
     mon.write(string.rep(" ", width))
     local fill = math.floor(width * fraction + 0.5)
     if fill > 0 then
-        setColors(mon, nil, progressColor(fraction))
+        setColors(mon, nil, colors.lime)
         mon.setCursorPos(x, y)
         mon.write(string.rep(" ", fill))
     end
@@ -98,14 +93,19 @@ local function renderActivePane(mon, x0, width, y0, height, list, now, watchdogS
         local y = y0 + 1 + (i - 1) * rowsPer
         drawSwatch(mon, x0, y, swatch.forItem(job.name))
         local elapsed = now - job.startedAt
-        local frac = elapsed / watchdogSec
+        local elapsedFrac = elapsed / watchdogSec
+        local progress = job.progress or 0
+        local nameColor = (elapsedFrac > 0.8) and colors.red or colors.white
+        local pctStr = job.progress
+            and string.format("%d%%", math.floor(progress * 100 + 0.5))
+            or "--"
         local textX, textW = x0 + 3, width - 3
-        writeAt(mon, textX, y,     truncate(prettyName(job.name), textW),
-                colors.white, colors.black)
+        writeAt(mon, textX, y, truncate(prettyName(job.name), textW),
+                nameColor, colors.black)
         writeAt(mon, textX, y + 1,
-                truncate("x" .. job.count .. "  " .. fmtDuration(elapsed), textW),
+                truncate(("x%d  %s  %s"):format(job.count, fmtDuration(elapsed), pctStr), textW),
                 colors.lightGray, colors.black)
-        drawProgressBar(mon, x0, y + 2, width, frac)
+        drawProgressBar(mon, x0, y + 2, width, progress)
         setColors(mon, colors.white, colors.black)
     end
     if #list == 0 then

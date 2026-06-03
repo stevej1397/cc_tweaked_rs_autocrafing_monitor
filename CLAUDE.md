@@ -32,7 +32,7 @@ Data flows one way each tick: `bridge.getTasks() -> normaliseTask() -> tracker.t
 
 ## Conventions worth knowing before editing
 
-- **Progress bar = elapsed / watchdog timeout, not actual RS progress.** AP doesn't expose a reliable per-task completion percentage, so the bar's job is to show how close a craft is to being auto-cancelled (green → yellow → red at 50%/80%). If you ever wire in real progress data, change this in `display.lua` and update the colour thresholds.
+- **Progress bar = real RS completion**, sourced in `startup.lua`'s `findProgress` from `raw.completion` (preferred) or `raw.crafted / raw.quantity` (fallback). When neither field is usable, the bar stays empty and the count line shows `--` instead of a percentage. The watchdog warning lives separately: the job name turns red once elapsed time crosses 80% of `watchdogSeconds`.
 - **Tasks are fingerprinted as `name#count`** in `tracker.lua` because RS/AP doesn't surface a stable task ID. Two simultaneous identical orders therefore collapse into one tracked job. Don't try to "fix" this with synthetic UUIDs — they won't survive a reboot or a chunk unload because the fingerprint is the only way to re-identify a task across polls.
 - **AP API drift is contained in `bridge.lua`.** `cancelCraftingTask`'s signature has varied across AP versions, so the wrapper tries `(name, amount)` then falls back to `(name)`. `normaliseTask` in `startup.lua` is similarly forgiving about task shape. If you upgrade AP and something breaks, those two functions are where to start.
 - **Peripheral names default to auto-detect** (`rsBridge`, `monitor`). Set `config.bridgeName` / `config.monitorName` explicitly when there's more than one of either on the wired modem network.

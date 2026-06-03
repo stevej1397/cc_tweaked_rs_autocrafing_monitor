@@ -83,6 +83,23 @@ local function findCount(raw)
     return raw.quantity or raw.count or raw.amount or raw.size or 1
 end
 
+-- Real RS progress in [0, 1]. Prefer AP's pre-computed `completion`
+-- ratio. Fall back to crafted/quantity, which can be unreliable
+-- (semantics of `crafted` vary across AP versions). Returns nil if
+-- nothing usable was found.
+local function findProgress(raw)
+    if type(raw) ~= "table" then return nil end
+    if type(raw.completion) == "number" and raw.completion > 0 then
+        return math.max(0, math.min(1, raw.completion))
+    end
+    local qty, done = raw.quantity, raw.crafted
+    if type(qty) == "number" and qty > 0
+       and type(done) == "number" and done >= 0 and done <= qty then
+        return done / qty
+    end
+    return nil
+end
+
 local function dumpRaw(raw)
     if dumpedUnknown then return end
     local f = fs.open(UNKNOWN_DUMP, "w")
@@ -98,7 +115,11 @@ end
 local function normaliseTask(raw)
     local name = findName(raw)
     if not name then dumpRaw(raw) end
-    return { name = name or "?", count = findCount(raw) }
+    return {
+        name     = name or "?",
+        count    = findCount(raw),
+        progress = findProgress(raw),
+    }
 end
 
 local function now() return os.epoch("utc") / 1000 end

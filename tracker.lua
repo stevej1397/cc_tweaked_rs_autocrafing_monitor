@@ -25,9 +25,11 @@ function M.tick(now, rawTasks, normalise)
                 count     = t.count,
                 startedAt = now,
                 lastSeen  = now,
+                progress  = t.progress,
             }
         else
             active[key].lastSeen = now
+            active[key].progress = t.progress
         end
     end
     for key, job in pairs(active) do
