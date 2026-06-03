@@ -21,21 +21,74 @@ local function findPeripheral(typeName)
     end
 end
 
--- Pulls (name, count) out of whatever shape AP returns. Defensive because
--- AP's task shape has shifted across versions; we accept several common
--- spellings so the rest of the program doesn't have to care.
-local function normaliseTask(raw)
-    local name, count = "?", 1
-    if type(raw) ~= "table" then return { name = name, count = count } end
-    if raw.pattern and raw.pattern.outputs and raw.pattern.outputs[1] then
-        name = raw.pattern.outputs[1].name or name
-    elseif raw.name then
-        name = raw.name
-    elseif raw.item and raw.item.name then
-        name = raw.item.name
+-- Pulls (name, count) out of whatever shape AP returns. Defensive
+-- because AP's task shape has shifted across versions; we walk every
+-- field where the item id has been seen to live. When everything fails,
+-- the raw task is dumped to UNKNOWN_DUMP (once per session) so the
+-- actual structure can be inspected.
+
+local UNKNOWN_DUMP = "unknown_task.txt"
+local dumpedUnknown = false
+
+local function findName(raw)
+    if type(raw) ~= "table" then return nil end
+    if type(raw.name) == "string" then return raw.name end
+    if type(raw.id)   == "string" then return raw.id end
+    if type(raw.item) == "table" then
+        if type(raw.item.name) == "string" then return raw.item.name end
+        if type(raw.item.id)   == "string" then return raw.item.id end
     end
-    count = raw.quantity or raw.count or raw.amount or count
-    return { name = name, count = count }
+    if type(raw.output) == "string" then return raw.output end
+    if type(raw.output) == "table" then
+        if type(raw.output.name) == "string" then return raw.output.name end
+        local first = raw.output[1]
+        if type(first) == "string" then return first end
+        if type(first) == "table" and type(first.name) == "string" then return first.name end
+    end
+    if type(raw.outputs) == "table" then
+        for _, o in ipairs(raw.outputs) do
+            if type(o) == "string" then return o end
+            if type(o) == "table" and type(o.name) == "string" then return o.name end
+        end
+    end
+    if type(raw.pattern) == "table" then
+        local p = raw.pattern
+        if type(p.outputs) == "table" then
+            for _, o in ipairs(p.outputs) do
+                if type(o) == "string" then return o end
+                if type(o) == "table" and type(o.name) == "string" then return o.name end
+            end
+        end
+        if type(p.output) == "string" then return p.output end
+        if type(p.output) == "table" and type(p.output.name) == "string" then
+            return p.output.name
+        end
+        if type(p.name) == "string" then return p.name end
+    end
+    return nil
+end
+
+local function findCount(raw)
+    if type(raw) ~= "table" then return 1 end
+    return raw.quantity or raw.count or raw.amount or raw.size or 1
+end
+
+local function dumpRaw(raw)
+    if dumpedUnknown then return end
+    local f = fs.open(UNKNOWN_DUMP, "w")
+    if not f then return end
+    f.write("-- Raw AP task with no extractable item name.\n")
+    f.write("-- Paste contents to the maintainer.\n\n")
+    f.write(textutils.serialize(raw))
+    f.close()
+    dumpedUnknown = true
+    print("[debug] wrote unknown task shape to " .. UNKNOWN_DUMP)
+end
+
+local function normaliseTask(raw)
+    local name = findName(raw)
+    if not name then dumpRaw(raw) end
+    return { name = name or "?", count = findCount(raw) }
 end
 
 local function now() return os.epoch("utc") / 1000 end
