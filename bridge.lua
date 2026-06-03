@@ -15,7 +15,7 @@ end
 function M.attach(name)
     name = name or findByType("rsBridge")
     if not name then
-        error("rsBridge peripheral not found - connect one via wired modem")
+        error("rsBridge peripheral not found - attach it directly to the computer or via a wired modem")
     end
     bridge = peripheral.wrap(name)
     if not bridge then error("Failed to wrap peripheral: " .. name) end

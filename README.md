@@ -21,23 +21,34 @@ can't render real Minecraft item textures, so swatch colours come from
 - One **Advanced Computer**
 - One **Advanced Monitor** (designed for a 4×4 wall, but any size works)
 - An **RS Bridge** block (from Advanced Peripherals)
-- **Wired modems** + networking cable to tie the computer to the monitor and
-  the RS Bridge
+- *Optional:* wired modems + networking cable if you want to place the
+  computer somewhere other than directly touching the monitor and the
+  RS Bridge
 
 ## In-world setup
 
-1. Build the 4×4 advanced monitor wall.
-2. Place the advanced computer somewhere convenient.
-3. Place the RS Bridge block adjacent to your Refined Storage network
-   (treat it like any other RS device — it needs to be on the same RS
-   network as your Crafters).
-4. Attach a wired modem to each of: the computer, one monitor block, and
-   the RS Bridge. Connect them with networking cable and **right-click each
-   modem to activate it** (red ring → green ring).
+1. Build the monitor wall (any size; 4×4 is the design target).
+2. Wire the RS Bridge into your Refined Storage network — treat it like
+   any other RS device; it just needs to be on the same RS network as
+   your Crafters.
 
-When the computer boots you should see `monitor_n` and `rsBridge_n` listed
-by `peripherals` on its terminal. If not, the modems aren't activated or
-aren't on the same network.
+Then pick how the computer connects to them:
+
+**Direct attach (simplest):**
+Place the advanced computer so it touches the RS Bridge block on one
+side and one block of the monitor multiblock on another. Run
+`peripherals` on the computer's terminal — both should appear by side
+name (`top`/`bottom`/`left`/`right`/`front`/`back`). If only one shows
+up, slide the computer to a different block of the monitor wall.
+
+**Wired modem network (if you want to place them apart):**
+Attach a wired modem to each of: the computer, one block of the monitor
+wall, and the RS Bridge. Connect them with networking cable and
+**right-click each modem to activate it** (red ring → green ring).
+On `peripherals` they'll appear as `monitor_n` and `rsBridge_n`.
+
+Auto-detect handles both cases — no config change is needed when you
+switch between them.
 
 ## Deploy from GitHub
 
@@ -77,8 +88,14 @@ Edit `config.lua`. All times are in seconds.
 | `textScale`            | `0.5`   | Monitor text scale (smaller = more text, lower res)    |
 | `debug`                | `false` | Prints the first raw AP task each tick (useful if names show as `?`) |
 
-Set `monitorName`/`bridgeName` to a specific peripheral string when you
-have multiple of either on the same modem network.
+Set `monitorName`/`bridgeName` to a specific peripheral string when
+auto-detect picks the wrong one (e.g. you have two monitors). Valid
+values:
+
+- Direct-attached: a side name — `"top"`, `"bottom"`, `"left"`,
+  `"right"`, `"front"`, `"back"`.
+- Modem-attached: the modem peripheral name — e.g. `"monitor_2"`,
+  `"rsBridge_0"`.
 
 ## Adding swatch colours
 
@@ -90,9 +107,9 @@ the main loop.
 
 ## Troubleshooting
 
-- **`No rsBridge peripheral found`** — modems aren't activated, the RS
-  Bridge isn't on the same modem network, or it isn't connected to the RS
-  controller side.
+- **`No rsBridge peripheral found`** — the computer isn't touching the
+  RS Bridge and there's no active modem network linking them, or the
+  bridge isn't connected to the RS controller side of your network.
 - **Item names show as `?`** — Advanced Peripherals changed its task
   shape. Set `debug = true` in `config.lua`, reboot, and look at the
   printed table; adjust `normaliseTask` in `startup.lua` to read the

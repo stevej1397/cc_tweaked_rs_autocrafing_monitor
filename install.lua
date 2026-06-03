@@ -84,9 +84,10 @@ print()
 
 if not (mon and bridge) then
     printError("One or more peripherals are missing.")
-    print("Check that wired modems on the monitor and RS Bridge are")
-    print("activated (green ring) and on the same network as this")
-    print("computer, then run 'startup' or 'reboot'.")
+    print("Direct attach: place the computer touching both blocks.")
+    print("Modem network: attach wired modems and right-click them")
+    print("to activate (green ring), then link with networking cable.")
+    print("Verify with 'peripherals', then run 'startup' or 'reboot'.")
 else
     print("All set. Run 'startup' to launch now, or 'reboot' to")
     print("have it start automatically on world load.")

@@ -1,5 +1,9 @@
 return {
-    -- Peripheral names. Leave nil to auto-detect by type.
+    -- Peripheral names. Leave nil to auto-detect by type (works for
+    -- both direct-attached and modem-attached peripherals).
+    -- Direct-attached: use a side name -- "top", "bottom", "left",
+    --     "right", "front", "back".
+    -- Modem-attached:  use the modem name -- e.g. "monitor_0", "rsBridge_0".
     monitorName = nil,
     bridgeName  = nil,
 
