@@ -1,9 +1,12 @@
--- One-shot diagnostic. Run this with an RS craft actively in progress
--- to dump the raw shape AP returns from getCraftingTasks(). Writes the
--- first task to task_shape.txt and prints it to the terminal.
+-- Diagnostic snapshot of rsBridge.getCraftingTasks().
+--
+-- Run with crafts in flight to write every active task to task_shape.txt.
+-- During a big multi-job craft this captures the full shape AP returns
+-- under load, including sub-tasks and processing patterns.
 
 local CANDIDATES = { "rsBridge", "rs_bridge", "advancedperipherals:rs_bridge" }
 local FUZZY      = "rsbridge"
+local OUTPUT     = "task_shape.txt"
 
 local function findBridge()
     for _, n in ipairs(peripheral.getNames()) do
@@ -29,24 +32,30 @@ print(("RS Bridge: %s (%s)"):format(name, ptype))
 
 local bridge = peripheral.wrap(name)
 local tasks = bridge.getCraftingTasks() or {}
-print(("Active tasks: %d"):format(#tasks))
-if #tasks == 0 then
-    print("No active crafts. Queue one from your RS terminal,")
-    print("then re-run 'inspect'.")
+local n = #tasks
+print(("Active tasks: %d"):format(n))
+if n == 0 then
+    print("No active crafts. Queue something first and re-run 'inspect'.")
     return
 end
 
-local payload = textutils.serialize(tasks[1])
-
-local f = fs.open("task_shape.txt", "w")
-if f then
-    f.write("-- First active task from rsBridge.getCraftingTasks()\n")
-    f.write("-- Paste contents to the project maintainer.\n\n")
-    f.write(payload)
-    f.close()
-    print("Wrote task_shape.txt")
+local f = fs.open(OUTPUT, "w")
+if not f then
+    printError("Could not open " .. OUTPUT .. " for writing")
+    return
 end
 
+f.write(("-- Snapshot of rsBridge.getCraftingTasks()\n"))
+f.write(("-- Captured at epoch %d ms\n"):format(os.epoch("utc")))
+f.write(("-- Active tasks: %d\n\n"):format(n))
+for i, task in ipairs(tasks) do
+    f.write(("-- task[%d] --\n"):format(i))
+    f.write(textutils.serialize(task))
+    f.write("\n\n")
+end
+f.close()
+
+print(("Wrote %d tasks to %s"):format(n, OUTPUT))
 print()
-print("---- task[1] ----")
-print(payload)
+print("Preview of first task:")
+print(textutils.serialize(tasks[1]))
