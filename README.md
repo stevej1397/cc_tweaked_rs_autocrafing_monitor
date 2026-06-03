@@ -47,33 +47,20 @@ On the in-game computer's terminal:
 wget run https://raw.githubusercontent.com/stevej1397/cc_tweaked_rs_autocrafing_monitor/main/install.lua
 ```
 
-…or, since this repo doesn't ship an installer, pull each file by hand:
+That fetches every file into the current directory and prints a check
+of the peripherals it found. When it's done:
 
-```
-set REPO https://raw.githubusercontent.com/stevej1397/cc_tweaked_rs_autocrafing_monitor/main
-wget %REPO%/startup.lua  startup.lua
-wget %REPO%/config.lua   config.lua
-wget %REPO%/bridge.lua   bridge.lua
-wget %REPO%/tracker.lua  tracker.lua
-wget %REPO%/history.lua  history.lua
-wget %REPO%/watchdog.lua watchdog.lua
-wget %REPO%/display.lua  display.lua
-wget %REPO%/swatch.lua   swatch.lua
-reboot
-```
+- `startup` — launch now in the current session.
+- `reboot` — restart the computer; `startup.lua` will run automatically
+  on every world load from then on.
 
-(In CC: Tweaked the shell uses `$VAR`-style variables differently than the
-host shell; the simplest path is to type each `wget` line in full. The
-list above just shows what you're fetching.)
+If you'd rather pull files by hand, each one is at
+`https://raw.githubusercontent.com/stevej1397/cc_tweaked_rs_autocrafing_monitor/main/<filename>`
+and can be fetched with `wget <url> <filename>`.
 
-Alternatively, if you edit on the host: copy all the `.lua` files into the
-computer's save-folder directory, which lives at:
-
-```
-<world>/computercraft/computer/<id>/
-```
-
-Running this as `startup.lua` makes it launch on every world load.
+If you edit on the host instead of in-game, copy the `.lua` files into
+the computer's save-folder directory at
+`<world>/computercraft/computer/<id>/`.
 
 ## Configuration
 
