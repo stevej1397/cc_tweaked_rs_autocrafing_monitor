@@ -30,40 +30,45 @@ end
 local UNKNOWN_DUMP = "unknown_task.txt"
 local dumpedUnknown = false
 
+-- Real Minecraft item ids always look like "modid:item_name". RS uses
+-- UUID-shaped strings for task identifiers and we never want those, so
+-- gate every candidate on the colon.
+local function isItemId(s)
+    return type(s) == "string" and s:find(":") ~= nil
+end
+
 local function findName(raw)
     if type(raw) ~= "table" then return nil end
-    if type(raw.name) == "string" then return raw.name end
-    if type(raw.id)   == "string" then return raw.id end
+    if isItemId(raw.name) then return raw.name end
     if type(raw.item) == "table" then
-        if type(raw.item.name) == "string" then return raw.item.name end
-        if type(raw.item.id)   == "string" then return raw.item.id end
+        if isItemId(raw.item.name) then return raw.item.name end
+        if isItemId(raw.item.id)   then return raw.item.id end
     end
-    if type(raw.output) == "string" then return raw.output end
+    if isItemId(raw.output) then return raw.output end
     if type(raw.output) == "table" then
-        if type(raw.output.name) == "string" then return raw.output.name end
+        if isItemId(raw.output.name) then return raw.output.name end
         local first = raw.output[1]
-        if type(first) == "string" then return first end
-        if type(first) == "table" and type(first.name) == "string" then return first.name end
+        if isItemId(first) then return first end
+        if type(first) == "table" and isItemId(first.name) then return first.name end
     end
     if type(raw.outputs) == "table" then
         for _, o in ipairs(raw.outputs) do
-            if type(o) == "string" then return o end
-            if type(o) == "table" and type(o.name) == "string" then return o.name end
+            if isItemId(o) then return o end
+            if type(o) == "table" and isItemId(o.name) then return o.name end
         end
     end
     if type(raw.pattern) == "table" then
         local p = raw.pattern
         if type(p.outputs) == "table" then
             for _, o in ipairs(p.outputs) do
-                if type(o) == "string" then return o end
-                if type(o) == "table" and type(o.name) == "string" then return o.name end
+                if isItemId(o) then return o end
+                if type(o) == "table" and isItemId(o.name) then return o.name end
             end
         end
-        if type(p.output) == "string" then return p.output end
-        if type(p.output) == "table" and type(p.output.name) == "string" then
+        if isItemId(p.output) then return p.output end
+        if type(p.output) == "table" and isItemId(p.output.name) then
             return p.output.name
         end
-        if type(p.name) == "string" then return p.name end
     end
     return nil
 end
