@@ -5,7 +5,7 @@
 --
 -- Fetches every program file into the current directory and runs a quick
 -- peripheral check. Does not reboot - that's left to you so you can review
--- the output and fix any modem-network issues first.
+-- the output and fix any setup issues first.
 
 local REPO = "https://raw.githubusercontent.com/stevej1397/cc_tweaked_rs_autocrafing_monitor/main"
 
@@ -19,6 +19,10 @@ local FILES = {
     "display.lua",
     "swatch.lua",
 }
+
+local MONITOR_TYPES = { "monitor" }
+local BRIDGE_TYPES  = { "rsBridge", "rs_bridge", "advancedperipherals:rs_bridge" }
+local BRIDGE_FUZZY  = "rsbridge"
 
 local function fetch(name)
     local res, err = http.get(REPO .. "/" .. name)
@@ -37,9 +41,35 @@ local function writeFile(name, body)
     return true
 end
 
-local function findByType(typeName)
+local function matchesAny(name, candidates, fuzzy)
+    if peripheral.hasType then
+        for _, c in ipairs(candidates) do
+            if peripheral.hasType(name, c) then return c end
+        end
+    end
+    local t = peripheral.getType(name)
+    if not t then return nil end
+    for _, c in ipairs(candidates) do
+        if t == c then return t end
+    end
+    if fuzzy and t:lower():find(fuzzy) then return t end
+end
+
+local function findPeripheral(candidates, fuzzy)
     for _, n in ipairs(peripheral.getNames()) do
-        if peripheral.getType(n) == typeName then return n end
+        local matched = matchesAny(n, candidates, fuzzy)
+        if matched then return n, matched end
+    end
+end
+
+local function dumpPeripherals()
+    local names = peripheral.getNames()
+    if #names == 0 then
+        print("  (none)")
+        return
+    end
+    for _, n in ipairs(names) do
+        print(("  %-14s %s"):format(n, peripheral.getType(n) or "?"))
     end
 end
 
@@ -76,18 +106,30 @@ if #failed > 0 then
     return
 end
 
-local mon    = findByType("monitor")
-local bridge = findByType("rsBridge")
-print(("Monitor:   %s"):format(mon or "NOT FOUND"))
-print(("RS Bridge: %s"):format(bridge or "NOT FOUND"))
+local monName,    monType    = findPeripheral(MONITOR_TYPES)
+local bridgeName, bridgeType = findPeripheral(BRIDGE_TYPES, BRIDGE_FUZZY)
+
+print(("Monitor:   %s"):format(
+    monName    and (monName    .. " (" .. monType    .. ")") or "NOT FOUND"))
+print(("RS Bridge: %s"):format(
+    bridgeName and (bridgeName .. " (" .. bridgeType .. ")") or "NOT FOUND"))
 print()
 
-if not (mon and bridge) then
+if not (monName and bridgeName) then
     printError("One or more peripherals are missing.")
-    print("Direct attach: place the computer touching both blocks.")
-    print("Modem network: attach wired modems and right-click them")
-    print("to activate (green ring), then link with networking cable.")
-    print("Verify with 'peripherals', then run 'startup' or 'reboot'.")
+    print()
+    print("All peripherals currently visible:")
+    dumpPeripherals()
+    print()
+    if monName and not bridgeName then
+        print("If your RS Bridge appears above with a type that isn't")
+        print("rsBridge / rs_bridge, set bridgeName in config.lua to")
+        print("the name shown, then run 'startup' or 'reboot'.")
+    else
+        print("Direct attach: place the computer touching both blocks.")
+        print("Modem network: attach wired modems and right-click them")
+        print("to activate (green ring), then link with networking cable.")
+    end
 else
     print("All set. Run 'startup' to launch now, or 'reboot' to")
     print("have it start automatically on world load.")
