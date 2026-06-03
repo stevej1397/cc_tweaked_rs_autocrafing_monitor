@@ -18,6 +18,7 @@ local FILES = {
     "watchdog.lua",
     "display.lua",
     "swatch.lua",
+    "inspect.lua",
 }
 
 local MONITOR_TYPES = { "monitor" }
