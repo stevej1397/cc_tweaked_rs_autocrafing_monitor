@@ -24,7 +24,9 @@ tracker.lua    state: active jobs (with start times) + completed ring; persisten
 history.lua    folds completions into one entry per item name
 watchdog.lua   cancels active jobs older than the timeout
 display.lua    monitor rendering (title bar, vertical split, swatches, progress bars)
-swatch.lua    item-id -> CC color map for the 2×2 swatches; keyword fallbacks
+swatch.lua     item-id -> CC color map for the 2×2 swatches; keyword fallbacks
+install.lua    wget-run installer; fetches all files from GitHub and checks peripherals
+inspect.lua    diagnostic tool; dumps all active rsBridge tasks to task_shape.txt
 state.dat      runtime-only; persisted tracker state so a reboot keeps the last hour
 ```
 
@@ -37,7 +39,10 @@ Data flows one way each tick: `bridge.getTasks() -> normaliseTask() -> tracker.t
   - When it isn't, the bar falls back to elapsed/watchdog with a green→yellow→red gradient (50%/80% thresholds), doubling as the auto-cancel warning.
   In practice most tasks land in the fallback mode: AP's `completion` field stays at `0` for most of a craft on the version observed here. `raw.crafted` is NOT a usable progress signal — it's "items still needing to be crafted" (or `-1` when not yet computed), so don't reach for `crafted/quantity` as a fallback.
 - **Tasks are fingerprinted by `raw.id` (the RS task UUID) when present**, with `name#count` as a fallback when an id isn't available. UUIDs let concurrent identical orders track as separate jobs. Persisted state from before this change uses the old fingerprint format — clear `state.dat` after upgrading.
+- **Item names are validated with `isItemId`** in `startup.lua`: only strings containing `:` are accepted (e.g. `minecraft:diamond`). This prevents RS task UUIDs (which are bare hex strings) from being mistaken for item names. Any new name-extraction path in `findName` must go through this gate.
+- **Unknown task shapes are dumped to `unknown_task.txt`** (once per session) when `findName` can't extract an item id. Check this file when AP updates break name detection — it has the raw serialised task.
 - **AP API drift is contained in `bridge.lua`.** `cancelCraftingTask`'s signature has varied across AP versions, so the wrapper tries `(name, amount)` then falls back to `(name)`. `normaliseTask` in `startup.lua` is similarly forgiving about task shape. If you upgrade AP and something breaks, those two functions are where to start.
+- **`inspect.lua` is a standalone diagnostic script** — run it in-game with active crafts to dump every task's full shape to `task_shape.txt`. Useful when AP changes and you need to see what fields are actually present.
 - **Peripheral names default to auto-detect** (`rsBridge`, `monitor`). Set `config.bridgeName` / `config.monitorName` explicitly when there's more than one of either on the wired modem network.
 - **Cancelled jobs are NOT logged to history.** The watchdog sets `cancelledAt` on the job; when the next tick sees it disappear from the AP task list, that flag suppresses the completion entry. Preserve this when changing watchdog or tracker logic — otherwise auto-cancels will pollute the "last hour" pane.
 - **Times are seconds since epoch via `os.epoch("utc") / 1000`.** Don't mix with `os.clock()` (which is uptime, not wall-clock, and won't survive reboots).
