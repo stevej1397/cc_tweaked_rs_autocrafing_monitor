@@ -55,9 +55,9 @@ end
 -- Returns true on success; false, reason on failure (distinguishes a
 -- pcall error from the API returning false).
 function M.cancel(itemName, amount)
-    local ok, result = pcall(bridge.cancelCraftingTask, itemName, amount)
+    local ok, result = pcall(bridge.cancelCraftingTasks, itemName, amount)
     if not ok then
-        ok, result = pcall(bridge.cancelCraftingTask, itemName)
+        ok, result = pcall(bridge.cancelCraftingTasks, itemName)
     end
     if not ok then return false, result end
     if result == false then return false, "not accepted" end
