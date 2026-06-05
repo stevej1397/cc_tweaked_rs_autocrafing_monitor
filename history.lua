@@ -16,7 +16,11 @@ function M.aggregate(completions)
         e.jobs  = e.jobs + 1
         if c.completedAt > e.latestAt then e.latestAt = c.completedAt end
     end
-    table.sort(order, function(a, b) return a.name < b.name end)
+    table.sort(order, function(a, b)
+        local aKey = (a.name:match(":(.+)") or a.name):lower()
+        local bKey = (b.name:match(":(.+)") or b.name):lower()
+        return aKey < bKey
+    end)
     return order
 end
 
