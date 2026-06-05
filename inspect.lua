@@ -59,3 +59,16 @@ print(("Wrote %d tasks to %s"):format(n, OUTPUT))
 print()
 print("Preview of first task:")
 print(textutils.serialize(tasks[1]))
+
+print()
+print("Cancel-related methods on this bridge:")
+local found = false
+for _, method in ipairs(peripheral.getMethods(name)) do
+    if method:lower():find("cancel") or method:lower():find("craft") then
+        print("  " .. method)
+        found = true
+    end
+end
+if not found then
+    print("  (none found)")
+end
