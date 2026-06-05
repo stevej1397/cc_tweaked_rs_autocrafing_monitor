@@ -16,6 +16,8 @@
 
 local M = {}
 
+local historyScroll = { offset = 0, direction = 1 }
+
 local function setColors(mon, fg, bg)
     if fg then mon.setTextColor(fg) end
     if bg then mon.setBackgroundColor(bg) end
@@ -137,9 +139,22 @@ local function renderHistoryPane(mon, x0, width, y0, height, agg, now, swatch)
     drawHeader(mon, x0, y0, width, "LAST HOUR", colors.green)
     local rowsPer = 3
     local maxEntries = math.floor((height - 1) / rowsPer)
-    for i = 1, math.min(maxEntries, #agg) do
+
+    local maxOffset = math.max(0, #agg - maxEntries)
+    if maxOffset == 0 then
+        historyScroll.offset = 0
+        historyScroll.direction = 1
+    else
+        if historyScroll.offset > maxOffset then
+            historyScroll.offset = maxOffset
+        end
+    end
+
+    local startIdx = historyScroll.offset + 1
+    local endIdx = math.min(historyScroll.offset + maxEntries, #agg)
+    for i = startIdx, endIdx do
         local e = agg[i]
-        local y = y0 + 1 + (i - 1) * rowsPer
+        local y = y0 + 1 + (i - startIdx) * rowsPer
         drawSwatch(mon, x0, y, swatch.forItem(e.name))
         local textX, textW = x0 + 3, width - 3
         local countStr = "x" .. tostring(e.count)
@@ -154,10 +169,17 @@ local function renderHistoryPane(mon, x0, width, y0, height, agg, now, swatch)
     end
     if #agg == 0 then
         writeAt(mon, x0 + 1, y0 + 2, "(no recent crafts)", colors.gray, colors.black)
-    elseif #agg > maxEntries then
-        writeAt(mon, x0, y0 + height - 1,
-                ("+%d more"):format(#agg - maxEntries),
-                colors.gray, colors.black)
+    end
+
+    if maxOffset > 0 then
+        historyScroll.offset = historyScroll.offset + historyScroll.direction
+        if historyScroll.offset >= maxOffset then
+            historyScroll.offset = maxOffset
+            historyScroll.direction = -1
+        elseif historyScroll.offset <= 0 then
+            historyScroll.offset = 0
+            historyScroll.direction = 1
+        end
     end
 end
 

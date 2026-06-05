@@ -16,7 +16,7 @@ function M.aggregate(completions)
         e.jobs  = e.jobs + 1
         if c.completedAt > e.latestAt then e.latestAt = c.completedAt end
     end
-    table.sort(order, function(a, b) return a.latestAt > b.latestAt end)
+    table.sort(order, function(a, b) return a.name < b.name end)
     return order
 end
 
