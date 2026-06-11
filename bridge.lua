@@ -51,17 +51,26 @@ function M.getTasks()
     return bridge.getCraftingTasks() or {}
 end
 
--- AP's cancel signature varies. Try (name, amount), fall back to (name).
+-- AP's cancel signature varies across versions. Recent AP expects a single
+-- table argument ({ name = ..., count = ... }); older releases took
+-- (name, amount) or (name). Try them in that order and return the first
+-- that doesn't error or return false.
 -- Returns true on success; false, reason on failure (distinguishes a
 -- pcall error from the API returning false).
 function M.cancel(itemName, amount)
-    local ok, result = pcall(bridge.cancelCraftingTasks, itemName, amount)
-    if not ok then
-        ok, result = pcall(bridge.cancelCraftingTasks, itemName)
+    local attempts = {
+        function() return bridge.cancelCraftingTasks({ name = itemName, count = amount }) end,
+        function() return bridge.cancelCraftingTasks({ name = itemName }) end,
+        function() return bridge.cancelCraftingTasks(itemName, amount) end,
+        function() return bridge.cancelCraftingTasks(itemName) end,
+    }
+    local lastErr = "not accepted"
+    for _, attempt in ipairs(attempts) do
+        local ok, result = pcall(attempt)
+        if ok and result ~= false then return true end
+        if not ok then lastErr = result end
     end
-    if not ok then return false, result end
-    if result == false then return false, "not accepted" end
-    return true
+    return false, lastErr
 end
 
 return M
